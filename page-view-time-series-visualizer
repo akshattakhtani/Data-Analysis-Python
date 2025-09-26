@@ -1,0 +1,104 @@
+# time_series_visualizer.py
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib.dates as mdates
+
+# -------------------------
+# 1. Import and Clean Data
+# -------------------------
+# Read CSV and parse dates
+df = pd.read_csv('fcc-forum-pageviews.csv', parse_dates=['date'], index_col='date')
+
+# Clean data by removing top 2.5% and bottom 2.5% of page views
+lower_bound = df['value'].quantile(0.025)
+upper_bound = df['value'].quantile(0.975)
+df = df[(df['value'] >= lower_bound) & (df['value'] <= upper_bound)]
+
+# -------------------------
+# 2. Draw Line Plot
+# -------------------------
+def draw_line_plot():
+    # Copy dataframe
+    data = df.copy()
+
+    fig, ax = plt.subplots(figsize=(15,5))
+    ax.plot(data.index, data['value'], color='red')
+    ax.set_title('Daily freeCodeCamp Forum Page Views 5/2016-12/2019')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Page Views')
+
+    # Save figure
+    fig.savefig('line_plot.png')
+    return fig
+
+# -------------------------
+# 3. Draw Bar Plot
+# -------------------------
+def draw_bar_plot():
+    # Copy dataframe
+    data = df.copy()
+
+    # Add 'year' and 'month' columns
+    data['year'] = data.index.year
+    data['month'] = data.index.month_name()
+
+    # Group by year and month to calculate average
+    df_bar = data.groupby(['year','month'])['value'].mean().unstack()
+
+    # Ensure months are in calendar order
+    months_order = ['January','February','March','April','May','June',
+                    'July','August','September','October','November','December']
+    df_bar = df_bar[months_order]
+
+    # Draw bar chart
+    fig = df_bar.plot(kind='bar', figsize=(15,7)).figure
+    plt.xlabel('Years')
+    plt.ylabel('Average Page Views')
+    plt.legend(title='Months')
+
+    # Save figure
+    fig.savefig('bar_plot.png')
+    return fig
+
+# -------------------------
+# 4. Draw Box Plots
+# -------------------------
+def draw_box_plot():
+    # Copy dataframe
+    data = df.copy().reset_index()
+    
+    # Create year and month columns
+    data['year'] = data['date'].dt.year
+    data['month'] = data['date'].dt.strftime('%b')  # abbreviated month name
+    data['month_num'] = data['date'].dt.month
+
+    # Sort months by calendar order
+    data = data.sort_values('month_num')
+
+    fig, axes = plt.subplots(1, 2, figsize=(20,7))
+
+    # Year-wise Box Plot (Trend)
+    sns.boxplot(x='year', y='value', data=data, ax=axes[0])
+    axes[0].set_title('Year-wise Box Plot (Trend)')
+    axes[0].set_xlabel('Year')
+    axes[0].set_ylabel('Page Views')
+
+    # Month-wise Box Plot (Seasonality)
+    sns.boxplot(x='month', y='value', data=data, ax=axes[1])
+    axes[1].set_title('Month-wise Box Plot (Seasonality)')
+    axes[1].set_xlabel('Month')
+    axes[1].set_ylabel('Page Views')
+
+    # Save figure
+    fig.savefig('box_plot.png')
+    return fig
+
+# -------------------------
+# For testing independently
+# -------------------------
+if __name__ == "__main__":
+    draw_line_plot()
+    draw_bar_plot()
+    draw_box_plot()
